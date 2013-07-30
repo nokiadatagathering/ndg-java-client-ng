@@ -387,6 +387,7 @@ class XfoilPhotoFieldUi extends ContainerUI implements  ActionListener, CameraMa
     private Container mImageContainer;
     private Button imageButton;
     private boolean isChanged = false;
+    private boolean updateFromImageArray = false;
 
     public XfoilPhotoFieldUi(BoundElement element){
         super(element);
@@ -394,7 +395,7 @@ class XfoilPhotoFieldUi extends ContainerUI implements  ActionListener, CameraMa
         AppMIDlet.getInstance().setCurrentCameraManager(OpenRosaCameraManager.getInstance());
 
         addQuestionName();
-        addPhotoContainer();
+        addPhotoContainer(element);
     }
 
     public void focusGained(Component cmpnt) {
@@ -435,9 +436,10 @@ class XfoilPhotoFieldUi extends ContainerUI implements  ActionListener, CameraMa
     }
 
     public void commitValue() {
-//        element.setStringValue(OpenRosaCameraManager.getInstance().getImageStringValue());
-
-        commitValue( OpenRosaCameraManager.getInstance().getImageStringValue() );
+        if(OpenRosaCameraManager.getInstance().getImageArray() != null) {
+            commitValue( OpenRosaCameraManager.getInstance().getImageStringValue() );
+        }
+        OpenRosaCameraManager.getInstance().reset();
     }
 
     public void setEnabled(boolean enabled) {
@@ -446,19 +448,11 @@ class XfoilPhotoFieldUi extends ContainerUI implements  ActionListener, CameraMa
         imageButton.setEnabled( enabled );
     }
 
-    protected boolean validate() {
-        return true;
-    }
-
-    private void addPhotoContainer(){
+    private void addPhotoContainer(BoundElement element){
         setLayout(new BoxLayout(BoxLayout.Y_AXIS));
         mImageContainer = new Container (new FlowLayout());
 
         Image thumbnail = null;
-        if(element.getStringValue() != null && !element.getStringValue().equals("")){
-            byte[] byteArray = Base64Coder.decode(element.getStringValue());
-            OpenRosaCameraManager.getInstance().setImageArray(byteArray);
-        }
 
         imageButton = new Button();
         imageButton.setIcon(thumbnail);
@@ -468,14 +462,22 @@ class XfoilPhotoFieldUi extends ContainerUI implements  ActionListener, CameraMa
         imageButton.addFocusListener(this);
         mImageContainer.addComponent(imageButton);
 
-        updateImageButton();
+        updateImageButton(element);
 
         addComponent(mImageContainer);
     }
 
-    private void updateImageButton(){
+    private void updateImageButton(BoundElement element){
         Image thumbnail = null;
-        byte[] image = OpenRosaCameraManager.getInstance().getImageArray();
+        byte[] image = null;
+        if(element.getStringValue() != null && !element.getStringValue().equals("")) {
+            image = Base64Coder.decode(element.getStringValue());
+        }
+        else if(updateFromImageArray) {
+            image = OpenRosaCameraManager.getInstance().getImageArray();
+            commitValue();
+            updateFromImageArray = false;
+        }
         if(image != null){
             Image img = Image.createImage(image, 0, image.length);
             thumbnail = img.scaled(ImageData.THUMBNAIL_SIZE, ImageData.THUMBNAIL_SIZE);
@@ -490,7 +492,8 @@ class XfoilPhotoFieldUi extends ContainerUI implements  ActionListener, CameraMa
     public void actionPerformed(ActionEvent cmd) {
         if ( cmd.getSource() instanceof Button ) {
             OpenRosaCameraManager.getInstance().sendPostProcessData(this);
-            if(OpenRosaCameraManager.getInstance().getImageArray() == null){
+            if(this.element.getStringValue().equals("") && 
+                    OpenRosaCameraManager.getInstance().getImageArray() == null){
                 new ImageQuestionContextMenu(0, ImageQuestionContextMenu.TWO_ACTIONS_CONTEXT_MENU).show();
             }else{
                 new ImageQuestionContextMenu(0, ImageQuestionContextMenu.FOUR_ACTIONS_CONTEXT_MENU).show();
@@ -500,9 +503,14 @@ class XfoilPhotoFieldUi extends ContainerUI implements  ActionListener, CameraMa
 
     public void update() {
         isChanged = true;
-        updateImageButton();
+        updateFromImageArray = true;
+        updateImageButton(this.element);
         rebuildOptionMenu();
         getComponentForm().showBack();
+    }
+    
+    public void delete() {
+        this.element.setStringValue("");
     }
 }
 

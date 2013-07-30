@@ -34,7 +34,7 @@ public class OpenRosaCameraManager implements ICameraManager{
 
     public void deletePhoto() {
         imageArray = null;
-        listener.update();
+        listener.delete();
     }
 
     public void sendPostProcessData(CameraManagerListener managerListener){

@@ -7,4 +7,5 @@ package br.org.indt.ndg.lwuit.ui.camera;
 public interface CameraManagerListener {
 
     void update( );
+    void delete( );
 }
